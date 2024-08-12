@@ -4,6 +4,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "./MatchTournament.sol" ;
 
+//Tournament
 contract TournamentLevelUp is VRFConsumerBase {
     bytes32 internal keyHash;
     uint256 internal fee;
@@ -125,6 +126,7 @@ contract TournamentLevelUp is VRFConsumerBase {
     
 }
 
+//MatchTournament
 contract MatchTournament {
     struct MatchResult {
         address winner ;
@@ -168,6 +170,7 @@ contract MatchTournament {
     }
 }
 
+//user manager 
 contract UserManager is Ownable(msg.sender){
     struct User{
         string name  ;
@@ -193,6 +196,7 @@ contract UserManager is Ownable(msg.sender){
     }
 }
 
+// NFT contract
 contract NFTcontract is ERC721,Ownable() {
     uint private _tokenIds; 
     mapping(uint => string) private _tokenURIs ;
