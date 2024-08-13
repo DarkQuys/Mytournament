@@ -9,7 +9,7 @@ contract TournamentLevelUp is VRFConsumerBase {
     bytes32 internal keyHash;
     uint256 internal fee;
     uint256 public randomResult;
-    MatchManagement public matchManagement;
+    MatchTournament public matchManagement;
     constructor() 
         VRFConsumerBase(
             0xAA77729D3466CA35AE8D28CEED6A09A9AAB0C56F153691C8AD1B38C1B7041B15, 
@@ -24,15 +24,25 @@ contract TournamentLevelUp is VRFConsumerBase {
         uint startTime ;
         uint endTime ;
         uint entryFee ; 
-        uint players  ;
+        address[] players  ;
         address winner;
         bool ended ; 
+    }
+    struct Match{
+        address player1 ;
+        address player2 ; 
+        address winner  ;
+        bool iDraw ; 
+        bool ended ;
     }
     mapping(uint => Tournament) public tournaments ;
     uint public tournamentCount ;
     mapping(address => bool) public admins;
     mapping(address => bool) public referees;
     mapping(address => uint) public balances; 
+    mapping(uint => Match) public tournamentMatches ;
+
+
     constructor() {
         admins[msg.sender] = true ;
     }
@@ -49,7 +59,6 @@ contract TournamentLevelUp is VRFConsumerBase {
     }
     function removeAdmin(address adminn) external onlyAdmin{
         admins[adminn] =false ;
-
     }
     function addReferee(address referee) external onlyAdmin {
         referees[referee] = true;
@@ -57,6 +66,38 @@ contract TournamentLevelUp is VRFConsumerBase {
      function removeReferee(address referee) external onlyAdmin {
         referees[referee] = false;
     }
+    
+    function createMatches(uint idTournament) external onlyAdmin{
+        require(idTournament >0 && idTournament <= tournamentCount , " id of tournament invalid ");
+        require(tournaments[idTournament].players >=2 , "need more two players");
+        for (int i=0 ;i < tournaments[idTournament].players.length ; i+2 ){
+            address player1 = tournaments[idTournament].players[i] ; 
+            address player2 = tournaments[idTournament].players[i+1];
+            tournamentMatches[idTournament] = Match(player1 , player2 , address(0) , false ,false) ;
+        }
+    }
+    function setResultMatches(uint idTournament , address winner )external {
+        require(idTournament>0 && idTournament <= tournamentCount ,"id of tournament invalid") ; 
+        require(!tournamentMatches[idTournament].ended , "tran dau da ket thuc" );
+        if(winner == tournamentMatches[idTournament].player1 ){
+            tournamentMatches[idTournament].iDraw = false   ;
+            tournamentMatches[idTournament].ended = true ;
+            tournamentMatches[idTournament].winner = winner;
+            // matchManagement.recordMatch(idTournament, player1, player2);
+        }
+        else if (winner == tournamentMatches[idTournament].player2){
+            tournamentMatches[idTournament].iDraw = false   ;
+            tournamentMatches[idTournament].ended = true ;
+            tournamentMatches[idTournament].winner = winner;
+            // matchManagement.recordMatch(idTournament, player2, player1);
+        }
+        else {
+            tournamentMatches[idTournament].iDraw = true    ;
+            tournamentMatches[idTournament].ended = false ;
+            tournamentMatches[idTournament].winner = winner;
+        }
+    }
+
     event created(uint indexed id , string name , uint startTime , uint endTime ,uint entryFee ) ;
     event edited(uint indexed id , string name , uint startTime , uint endTime ,uint entryFee) ;
     event joined(uint indexed id) ;
@@ -69,7 +110,7 @@ contract TournamentLevelUp is VRFConsumerBase {
             startTime: startTime,
             endTime: endTime,
             entryFee: entryFee,
-            players : 0 ,
+            // players : 0
             winner: address(0),
             ended: false
         }
@@ -89,7 +130,7 @@ contract TournamentLevelUp is VRFConsumerBase {
         require(id > 0 && id <= tournamentCount, "Invalid tournament ID");
         require(block.timestamp < tournaments[id].startTime, "Tournament has already started");
         require(msg.value == tournaments[id].entryFee, "Incorrect entry fee");
-        tournaments[id].players++;
+        tournaments[id].players.push(msg.sender);
         balances[address(this)] += msg.value;
         emit joined(id);
     }
@@ -104,7 +145,7 @@ contract TournamentLevelUp is VRFConsumerBase {
         require(id >0 && id < tournamentCount ,  "idex invalid");
         require(!tournaments[id].ended , "giai dau da ket thucs");
         tournaments[id].winner = winner ;
-        balances[winner] = tournaments[id].entryFee * tournaments[id].players ;
+        balances[winner] = tournaments[id].entryFee * tournaments[id].players.length ;
         emit setwin(id, winner);
     }
     // Request a random number 
